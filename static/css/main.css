@@ -1,9 +1,67 @@
-* {
+body {
 	font-family: Arial, Helvetica, sans-serif;
 }
 
-#form-login label {
-	width: 70px;
+h1, h2, h3, h4 {
+	clear: both;
+}
+
+a {
+	text-decoration: none;
+	color: #0066FF;
+}
+
+a:hover {
+	color: #00BF00;
+}
+
+label {
+	width: 80px;
 	font-weight: bold;
 	display: inline-block;
+}
+
+#flash, .error, #feeder-status {
+	margin: 5px;
+	padding: 10px;
+	display: inline-block;
+}
+
+#flash {
+	border: 2px solid #28A9FF;
+	background-color: #D4EEFF;
+}
+
+.error {
+	border: 2px solid #FF2F28;
+	background-color: #FFD6D4;
+}
+
+#feeder-status.alive {
+	border: 2px solid #44FF28;
+	background-color: #DAFFD4;
+}
+
+#feeder-status.dead {
+	border: 2px solid #FFF528;
+	background-color: #FFFDD4;
+}
+
+#menu {
+	list-style-type: none;
+	margin: 0;
+	padding: 0;
+}
+
+#menu > li {
+	display: inline-block;
+	float: left;
+	padding: 3px 5px;
+	border-right: 1px solid #000;
+	border-top: 1px solid #000;
+	border-bottom: 1px solid #000;
+}
+
+#menu li:first-child {
+	border-left: 1px solid #000;
 }

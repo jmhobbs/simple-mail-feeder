@@ -22,7 +22,7 @@ urls = (
 )
 
 app = web.application( urls, locals() )
-session = web.session.Session( app, web.session.DiskStore('sessions'), initializer={ 'authenticated': False, 'flash': False, 'set_flash': False } )
+session = web.session.Session( app, web.session.DiskStore('sessions'), initializer={ 'authenticated': False, 'user_id': 0, 'is_admin': False, 'flash': False, 'set_flash': False } )
 render = web.template.render( 'templates/', base='layout', globals={'session': session} )
 db = web.database( dbn='sqlite', db=config.get( 'Database', 'path' ) )
 
@@ -65,17 +65,19 @@ class logout:
 	def GET( self ):
 		session.kill()
 		session.set_flash = "Logged Out"
-		return render.login()
+		return render.login( None )
 
 class start_feeder:
 	def GET ( self ):
 		global feeder
-		if session.is_admin and not feeder.is_alive():
+		if not feeder.is_alive():
 			feeder = Process( target=smf.feeder.run )
 			feeder.daemon = True
 			feeder.start()
 			session.set_flash = "Feeder Started"
-			raise web.seeother( '/' )
+		else:
+			session.set_flash = "Feeder Already Running"
+		raise web.seeother( '/' )
 
 class stop_feeder:
 	def GET ( self ):
@@ -83,7 +85,13 @@ class stop_feeder:
 		session.set_flash = "Feeder Stopped"
 		raise web.seeother( '/' )
 
-def flash_loadhook():
+def admin_loadhook ():
+	if not session.is_admin and "admin" == web.ctx.path[1:6]:
+		# TODO: Log this here
+		session.set_flash = "Permission denied. You are not an admin, you may not access: " + web.ctx.path
+		raise web.seeother( '/' )
+
+def flash_loadhook ():
 	if False != session.set_flash:
 		session.flash = session.set_flash
 		session.set_flash = False
@@ -91,9 +99,10 @@ def flash_loadhook():
 def feeder_loadhook ():
 	session.feeder = feeder.is_alive()
 
-def flash_unloadhook():
+def flash_unloadhook ():
 	session.flash = False
 
+app.add_processor( web.loadhook( admin_loadhook ) )
 app.add_processor( web.loadhook( flash_loadhook ) )
 app.add_processor( web.loadhook( feeder_loadhook ) )
 app.add_processor( web.unloadhook( flash_unloadhook ) )
