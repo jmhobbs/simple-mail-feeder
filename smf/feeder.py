@@ -30,6 +30,8 @@ def run ():
 def new_feed ( url ):
 	try:
 		d = feedparser.parse( url )
+		if not d.has_key( 'status' ):
+			raise Exception( 'Error fetching content. Bad URL?' )
 		if d.status != 200 and d.status != 301 and d.status != 302:
 			raise Exception( d.debug_message)
 		if not d.feed.has_key( 'title' ):

@@ -3,7 +3,7 @@ $var title: My Subscriptions
 
 <ul class="feed-list">
 $for feed in feeds:
-	<li><a href="$feed.link" target="_blank">$feed.title</a> - [ <a href="/subscription/delete/$feed.id">Unsubscribe</a> ]</li>
+	<li><a href="$feed.link" target="_blank">$feed.title</a> - [ <a href="/user/unsubscribe/$feed.id">Unsubscribe</a> ]</li>
 </ul>
 
 <h2>Add New Subscription</h2>

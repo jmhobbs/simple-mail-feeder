@@ -26,6 +26,7 @@ urls = (
 	"/admin/feeds", "list_feeds",
 	
 	"/user/subscribe", "user_subscribe",
+	"/user/unsubscribe/(.*)", "user_unsubscribe",
 	"/user/subscriptions", "user_subscriptions"
 )
 
@@ -129,6 +130,12 @@ class user_subscribe:
 
 		db.insert( 'subscriptions', feed_id=feed_id, user_id=session.user_id )
 		session.set_flash = 'Subscribed to  "' + title + '"'
+		raise web.seeother( '/user/subscriptions' )
+
+class user_unsubscribe:
+	def GET ( self, feed_id ):
+		db.query( "DELETE FROM subscriptions WHERE feed_id = $feed_id AND user_id = $user_id", vars={ 'feed_id': feed_id, 'user_id': session.user_id } )
+		session.set_flash = 'Unsubscribed!'
 		raise web.seeother( '/user/subscriptions' )
 
 class user_subscriptions:

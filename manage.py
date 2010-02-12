@@ -5,6 +5,27 @@ import sqlite3
 
 from smf import constants
 
+def add_user( admin ):
+	while True:
+		email = raw_input( "E-Mail: " )
+		if 0 == len( email.strip() ):
+			print
+			print "You must enter an email."
+			print
+		else:
+			break
+	while True:
+		password = raw_input( "Password: " )
+		if 0 == len( password.strip() ):
+			print
+			print "You must enter a password."
+			print
+		else:
+			break
+	hashed = bcrypt.hashpw( password, bcrypt.gensalt() )
+	cursor.execute( 'INSERT INTO users (is_admin, email, password) VALUES (?,?,?)', ( admin, email, hashed ) );
+	conn.commit()
+
 print "-" * 40
 print "  Welcome to Simple Mail Feeder setup!"
 print "-" * 40
@@ -73,7 +94,8 @@ while True:
 	print "-" * 40
 	print "Options:"
 	print "\tq) Quit"
-	print "\t1) Create new administrator"
+	print "\t1) Create admin user"
+	print "\t2) Create normal user"
 	print
 	option = raw_input( "What would you like to do? ")
 	print
@@ -81,27 +103,13 @@ while True:
 		print "Goodbye!"
 		exit()
 	elif option == '1':
-		while True:
-			email = raw_input( "E-Mail: " )
-			if 0 == len( email.strip() ):
-				print
-				print "You must enter an email."
-				print
-			else:
-				break
-		while True:
-			password = raw_input( "Password: " )
-			if 0 == len( password.strip() ):
-				print
-				print "You must enter a password."
-				print
-			else:
-				break
-		hashed = bcrypt.hashpw( password, bcrypt.gensalt() )
-		cursor.execute( 'INSERT INTO users (is_admin, email, password) VALUES (?,?,?)', ( True, email, hashed ) );
-		conn.commit()
+		add_user( True )
 		print
-		print "Added administrative user."
+		print "Added admin user."
+	elif option == '2':
+		add_user( False )
+		print
+		print "Added normal user."
 	else:
 		print "Invalid Option"
 	print
