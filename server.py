@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from datetime import datetime
+import time
 import ConfigParser
 import bcrypt
 import web
@@ -17,13 +19,16 @@ urls = (
 	"/", "index",
 	"/login", "login",
 	"/logout", "logout",
+	
 	"/admin/feeder/start", "start_feeder",
 	"/admin/feeder/stop", "stop_feeder",
-	"/feed/add", "add_feed"
+	
+	"/feed/add", "add_feed",
+	"/feed/list", "list_feeds"
 )
 
 app = web.application( urls, locals() )
-session = web.session.Session( app, web.session.DiskStore('sessions'), initializer={ 'authenticated': False, 'user_id': 0, 'is_admin': False, 'flash': False, 'set_flash': False } )
+session = web.session.Session( app, web.session.DiskStore('sessions'), initializer={ 'authenticated': False, 'user_id': 0, 'is_admin': False, 'flash': False, 'set_flash': False, 'error_flash': False, 'set_error_flash': False } )
 render = web.template.render( 'views/', base='layout', globals={'session': session} )
 db = web.database( dbn='sqlite', db=config.get( 'Database', 'path' ) )
 
@@ -34,11 +39,13 @@ class index:
 		else: 
 			return render.index()
 
+####### Session Management #######
+
 class login:
 	def GET( self ):
 		if session.authenticated:
 			raise web.seeother( '/' )
-		return render.login( None )
+		return render.login()
 
 	def POST( self ):
 		i = web.input()
@@ -48,8 +55,8 @@ class login:
 		try:
 			user = res[0]
 		except IndexError, e:
-			error = "Invalid Credentials"
-			return render.login( error )
+			session.error_flash = "Invalid Credentials"
+			return render.login()
 
 		# See if the passwords match...
 		if bcrypt.hashpw( i.password, user.password ) == user.password:
@@ -59,14 +66,19 @@ class login:
 			session.set_flash = "Logged In"
 			raise web.seeother( '/' )
 		else:
-			error = "Invalid Credentials"
-			return render.login( error )
+			session.error_flash = "Invalid Credentials"
+			return render.login()
 
 class logout:
 	def GET( self ):
+		session.authenticated = False
+		session.user_id = 0
+		session.is_admin = False
 		session.kill()
-		session.set_flash = "Logged Out"
-		return render.login( None )
+		session.flash = "Logged Out"
+		return render.login()
+
+####### Feeder Management #######
 
 class start_feeder:
 	def GET ( self ):
@@ -86,6 +98,8 @@ class stop_feeder:
 		session.set_flash = "Feeder Stopped"
 		raise web.seeother( '/' )
 
+####### Feed Management #######
+
 class add_feed:
 	def GET ( self ):
 		return render.add_feed()
@@ -98,11 +112,24 @@ class add_feed:
 			session.flash = 'Feed already exists. It\'s called "' + match.title + '"'
 			return render.add_feed()
 		except IndexError, e:
-			# TODO: Fix Added timestamp.
-			feed_id = db.insert( 'feeds', title=i.title, url=i.url, added="0000-00-00 00:00:00", fetched="0000-00-00 00:00:00", etag="", interval=900 )
-			db.insert( 'subscriptions', feed_id=feed_id, user_id=session.user_id )
-			session.set_flash = 'Added new Feed "' + i.title + '"'
-			raise web.seeother( '/' )
+			result = smf.feeder.new_feed( i.url )
+			if dict == type( result ):
+				now = time.strftime( '%Y-%m-%d %H:%M:%s', datetime.now().timetuple() )
+				modified = time.strftime( '%Y-%m-%d %H:%M:%s', result['modified'] )
+				feed_id = db.insert( 'feeds', title=result['title'], url=result['url'], description=result['description'], link=result['link'], added=now, checked=now, modified=modified, etag=result['etag'], interval=900 )
+				db.insert( 'subscriptions', feed_id=feed_id, user_id=session.user_id )
+				session.set_flash = 'Added new Feed "' + result['title'] + '"'
+				raise web.seeother( '/' )
+			else:
+				session.error_flash = 'Error adding feed: ' + result
+				return render.add_feed()
+
+class list_feeds:
+	def GET ( self ):
+		feeds = db.select( 'feeds' )
+		return render.list_feeds( feeds )
+
+####### Pre/Post Hooks #######
 
 def admin_loadhook ():
 	if not session.is_admin and "admin" == web.ctx.path[1:6]:
@@ -114,20 +141,28 @@ def flash_loadhook ():
 	if False != session.set_flash:
 		session.flash = session.set_flash
 		session.set_flash = False
+	if False != session.set_error_flash:
+		session.error_flash = session.set_error_flash
+		session.set_error_flash = False
 
 def feeder_loadhook ():
 	session.feeder = feeder.is_alive()
 
 def flash_unloadhook ():
 	session.flash = False
+	session.error_flash = False
 
 app.add_processor( web.loadhook( admin_loadhook ) )
 app.add_processor( web.loadhook( flash_loadhook ) )
 app.add_processor( web.loadhook( feeder_loadhook ) )
 app.add_processor( web.unloadhook( flash_unloadhook ) )
 
+####### Start the Feeder #######
+
 feeder = Process( target=smf.feeder.run )
 feeder.daemon = True
 feeder.start()
+
+####### Start the Server #######
 
 app.run()

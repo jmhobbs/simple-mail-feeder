@@ -1,28 +1,32 @@
 $def with ( content )
 <html>
 	<head>
-		<title>SMF - $content.title</title>
+		<title>Simple Mail Feeder - $content.title</title>
 		<link rel="stylesheet" href="/static/css/main.css" />
 	</head>
 	<body>
 		$if True == session.authenticated:
 			<ul id="menu">
 				<li><a href="/">Home</a></li>
-				<li><a href="/subscription/list">Subscriptions</a></li>
+				<li><a href="/feed/list">Feeds</a></li>
+				<li><a href="/subscription/list">Your Subscriptions</a></li>
 				<li><a href="/logout">Log Out</a></li>
 			</ul>
+			<br style="clear: both;" />
+		$if session.is_admin:
+			$if session.feeder:
+				<div id="feeder-status" class="alive">
+				Feeder is alive. <a href="/admin/feeder/stop">Stop Feeder</a>
+			$else:
+				<div id="feeder-status" class="dead">
+				Feeder is dead. <a href="/admin/feeder/start">Start Feeder</a>
+			</div><!--// #feeder-status //-->
 		<h1>$content.title</h1>
 		$if False != session.flash:
 			<div id="flash">$session.flash</div>
+		$if False != session.error_flash:
+			<div class="error">$session.error_flash</div>
 		<div id="content">
-			$if session.is_admin:
-				$if session.feeder:
-					<div id="feeder-status" class="alive">
-					Feeder is alive. <a href="/admin/feeder/stop">Stop Feeder</a>
-				$else:
-					<div id="feeder-status" class="dead">
-					Feeder is dead. <a href="/admin/feeder/start">Start Feeder</a>
-				</div><!--// #feeder-status //-->
 			$:content
 		</div>
 	</body>
