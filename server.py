@@ -18,7 +18,8 @@ urls = (
 	"/login", "login",
 	"/logout", "logout",
 	"/admin/feeder/start", "start_feeder",
-	"/admin/feeder/stop", "stop_feeder"
+	"/admin/feeder/stop", "stop_feeder",
+	"/feed/add", "add_feed"
 )
 
 app = web.application( urls, locals() )
@@ -31,7 +32,7 @@ class index:
 		if not session.authenticated:
 			raise web.seeother( '/login' )
 		else: 
-			return render.index( feeder.is_alive() )
+			return render.index()
 
 class login:
 	def GET( self ):
@@ -84,6 +85,24 @@ class stop_feeder:
 		feeder.terminate()
 		session.set_flash = "Feeder Stopped"
 		raise web.seeother( '/' )
+
+class add_feed:
+	def GET ( self ):
+		return render.add_feed()
+
+	def POST ( self ):
+		i = web.input()
+		res = db.select( 'feeds', { 'url': i.url }, what="title,id", where="url = $url", limit=1 )
+		try:
+			match = res[0]
+			session.flash = 'Feed already exists. It\'s called "' + match.title + '"'
+			return render.add_feed()
+		except IndexError, e:
+			# TODO: Fix Added timestamp.
+			feed_id = db.insert( 'feeds', title=i.title, url=i.url, added="0000-00-00 00:00:00", fetched="0000-00-00 00:00:00", etag="", interval=900 )
+			db.insert( 'subscriptions', feed_id=feed_id, user_id=session.user_id )
+			session.set_flash = 'Added new Feed "' + i.title + '"'
+			raise web.seeother( '/' )
 
 def admin_loadhook ():
 	if not session.is_admin and "admin" == web.ctx.path[1:6]:

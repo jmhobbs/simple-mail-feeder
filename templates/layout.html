@@ -2,14 +2,14 @@ $def with ( content )
 <html>
 	<head>
 		<title>SMF - $content.title</title>
-		<link rel="stylesheet" href="static/css/main.css" />
+		<link rel="stylesheet" href="/static/css/main.css" />
 	</head>
 	<body>
 		$if True == session.authenticated:
 			<ul id="menu">
 				<li><a href="/">Home</a></li>
-				<li><a href="subscription/list">Subscriptions</a></li>
-				<li><a href="logout">Log Out</a></li>
+				<li><a href="/subscription/list">Subscriptions</a></li>
+				<li><a href="/logout">Log Out</a></li>
 			</ul>
 		<h1>$content.title</h1>
 		$if False != session.flash:
@@ -18,10 +18,10 @@ $def with ( content )
 			$if session.is_admin:
 				$if session.feeder:
 					<div id="feeder-status" class="alive">
-					Feeder is alive. <a href="admin/feeder/stop">Stop Feeder</a>
+					Feeder is alive. <a href="/admin/feeder/stop">Stop Feeder</a>
 				$else:
 					<div id="feeder-status" class="dead">
-					Feeder is dead. <a href="admin/feeder/start">Start Feeder</a>
+					Feeder is dead. <a href="/admin/feeder/start">Start Feeder</a>
 				</div><!--// #feeder-status //-->
 			$:content
 		</div>
