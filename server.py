@@ -24,7 +24,7 @@ urls = (
 
 app = web.application( urls, locals() )
 session = web.session.Session( app, web.session.DiskStore('sessions'), initializer={ 'authenticated': False, 'user_id': 0, 'is_admin': False, 'flash': False, 'set_flash': False } )
-render = web.template.render( 'templates/', base='layout', globals={'session': session} )
+render = web.template.render( 'views/', base='layout', globals={'session': session} )
 db = web.database( dbn='sqlite', db=config.get( 'Database', 'path' ) )
 
 class index:
