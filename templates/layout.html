@@ -6,7 +6,17 @@ $def with ( content )
 	</head>
 	<body>
 		<h1>$content.title</h1>
+		$if False != session.flash:
+			<div id="flash">$session.flash</div>
 		<div id="content">
+		$if session.is_admin:
+			$if session.feeder:
+				<div id="feeder-status" class="alive">
+				Feeder is alive. <a href="admin/feeder/stop">Stop Feeder</a>
+			$else:
+				<div id="feeder-status" class="dead">
+				Feeder is dead. <a href="admin/feeder/start">Start Feeder</a>
+			</div><!--// #feeder-status //-->
 			$:content
 		</div>
 	</body>
