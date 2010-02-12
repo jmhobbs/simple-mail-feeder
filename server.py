@@ -23,8 +23,10 @@ urls = (
 	"/admin/feeder/start", "start_feeder",
 	"/admin/feeder/stop", "stop_feeder",
 	
-	"/feed/add", "add_feed",
-	"/feed/list", "list_feeds"
+	"/admin/feeds", "list_feeds",
+	
+	"/user/subscribe", "user_subscribe",
+	"/user/subscriptions", "user_subscriptions"
 )
 
 app = web.application( urls, locals() )
@@ -34,10 +36,8 @@ db = web.database( dbn='sqlite', db=config.get( 'Database', 'path' ) )
 
 class index:
 	def GET ( self ):
-		if not session.authenticated:
-			raise web.seeother( '/login' )
-		else: 
-			return render.index()
+		results = db.query( "SELECT COUNT(*) AS subscriptions FROM subscriptions WHERE user_id=$user_id", vars={ 'user_id': session.user_id } )
+		return render.index( results[0].subscriptions )
 
 ####### Session Management #######
 
@@ -100,38 +100,50 @@ class stop_feeder:
 
 ####### Feed Management #######
 
-class add_feed:
+class list_feeds:
 	def GET ( self ):
-		return render.add_feed()
+		# TODO: Detailed metrics here
+		feeds = db.select( 'feeds' )
+		return render.list_feeds( feeds )
 
+####### Subscription Management #######
+
+class user_subscribe:
 	def POST ( self ):
 		i = web.input()
 		res = db.select( 'feeds', { 'url': i.url }, what="title,id", where="url = $url", limit=1 )
 		try:
 			match = res[0]
-			session.flash = 'Feed already exists. It\'s called "' + match.title + '"'
-			return render.add_feed()
+			feed_id = match.id
+			title = match.title
 		except IndexError, e:
 			result = smf.feeder.new_feed( i.url )
 			if dict == type( result ):
 				now = time.strftime( '%Y-%m-%d %H:%M:%s', datetime.now().timetuple() )
 				modified = time.strftime( '%Y-%m-%d %H:%M:%s', result['modified'] )
 				feed_id = db.insert( 'feeds', title=result['title'], url=result['url'], description=result['description'], link=result['link'], added=now, checked=now, modified=modified, etag=result['etag'], interval=900 )
-				db.insert( 'subscriptions', feed_id=feed_id, user_id=session.user_id )
-				session.set_flash = 'Added new Feed "' + result['title'] + '"'
-				raise web.seeother( '/' )
+				title = result['title']
 			else:
-				session.error_flash = 'Error adding feed: ' + result
-				return render.add_feed()
+				session.set_error_flash = 'Error adding subscription: ' + result
+				raise web.seeother( '/user/subscriptions' )
 
-class list_feeds:
+		db.insert( 'subscriptions', feed_id=feed_id, user_id=session.user_id )
+		session.set_flash = 'Subscribed to  "' + title + '"'
+		raise web.seeother( '/user/subscriptions' )
+
+class user_subscriptions:
 	def GET ( self ):
-		feeds = db.select( 'feeds' )
-		return render.list_feeds( feeds )
+		subcount_results = db.query( "SELECT COUNT(*) AS subscriptions FROM subscriptions WHERE user_id=$user_id", vars={ 'user_id': session.user_id } )
+		feed_results = db.query( "SELECT * FROM feeds WHERE id IN ( SELECT feed_id FROM subscriptions WHERE user_id = $user_id )", vars={ 'user_id': session.user_id } )
+		return render.user_subscriptions( subcount_results[0].subscriptions, feed_results )
 
 ####### Pre/Post Hooks #######
 
-def admin_loadhook ():
+def permission_loadhook ():
+	no_auth_actions = ( '/login', '/logout' )
+	if not session.authenticated and web.ctx.path not in no_auth_actions :
+		raise web.seeother( '/login' )
+
 	if not session.is_admin and "admin" == web.ctx.path[1:6]:
 		# TODO: Log this here
 		session.set_flash = "Permission denied. You are not an admin, you may not access: " + web.ctx.path
@@ -152,7 +164,7 @@ def flash_unloadhook ():
 	session.flash = False
 	session.error_flash = False
 
-app.add_processor( web.loadhook( admin_loadhook ) )
+app.add_processor( web.loadhook( permission_loadhook ) )
 app.add_processor( web.loadhook( flash_loadhook ) )
 app.add_processor( web.loadhook( feeder_loadhook ) )
 app.add_processor( web.unloadhook( flash_unloadhook ) )
@@ -164,5 +176,8 @@ feeder.daemon = True
 feeder.start()
 
 ####### Start the Server #######
-
-app.run()
+try:
+	app.run()
+except Exception, e:
+	feeder.terminate()
+	feeder.join()

@@ -4,9 +4,14 @@ import time
 import feedparser
 import sqlite3
 import ConfigParser
+from datetime import datetime
 
 def run ():
-	return
+	while True:
+		try:
+			time.sleep( 999999 ) # Dummy!
+		except KeyboardInterrupt, e:
+			return
 
 # http://www.feedparser.org/docs/http-etag.html
 #def fetch_feed ( url, etag, last_modified ):
@@ -29,6 +34,17 @@ def new_feed ( url ):
 			raise Exception( d.debug_message)
 		if not d.feed.has_key( 'title' ):
 			raise Exception( "Content does not appear to be an RSS feed." )
-		return { 'url': d.href, 'title': d.feed.title, 'link': d.feed.link, 'description': d.feed.description, 'etag': d.etag, 'modified': d.modified }
+		
+		if d.has_key( 'etag' ):
+			etag = d.etag
+		else:
+			etag = ''
+		
+		if d.has_key( 'modified' ):
+			modified = modified
+		else:
+			modified = datetime.now().timetuple()
+		
+		return { 'url': d.href, 'title': d.feed.title, 'link': d.feed.link, 'description': d.feed.description, 'etag': etag, 'modified': modified }
 	except Exception, e:
 		return str( e )

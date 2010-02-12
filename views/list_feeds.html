@@ -1,5 +1,7 @@
 $def with ( feeds )
-$var title: List Feeds
+$var title: All Feeds
 
+<ul class="feed-list">
 $for feed in feeds:
-	$feed.title<br/>
+	<li><a href="$feed.link" target="_blank">$feed.title</a></li>
+</ul>

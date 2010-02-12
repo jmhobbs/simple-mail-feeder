@@ -1,0 +1,13 @@
+$def with ( subcount, feeds )
+$var title: My Subscriptions
+
+<ul class="feed-list">
+$for feed in feeds:
+	<li><a href="$feed.link" target="_blank">$feed.title</a> - [ <a href="/subscription/delete/$feed.id">Unsubscribe</a> ]</li>
+</ul>
+
+<h2>Add New Subscription</h2>
+<form id="add-feed" action="/user/subscribe" method="POST">
+	<label for="url">RSS URL:</label> <input type="text" name="url" />
+	<input type="submit" value="Add" />
+</form>

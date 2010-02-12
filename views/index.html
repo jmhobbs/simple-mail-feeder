@@ -1,6 +1,24 @@
-$var title: Home
-<h2>Add Feed</h2>
-<form id="add-feed" action="/feed/add" method="POST">
-	<label for="url">RSS URL:</label> <input type="text" name="url" />
-	<input type="submit" value="Add" />
+$def with ( subcount )
+$var title: My Account
+
+<b>Subscriptions:</b> $subcount
+
+<h2>Change E-mail</h2>
+<form id="form-change-email" action="/user/email/change" method="POST">
+	<label for="email">E-Mail:</label>
+	<input type="text" name="email" /><br/>
+	<label for="password">Current Password:</label>
+	<input type="password" name="password" /><br/>
+	<input type="submit" value="Change E-Mail" />
+</form>
+
+<h2>Change Password</h2>
+<form id="form-change-password" action="/user/password/change" method="POST">
+	<label for="password">Current Password:</label>
+	<input type="password" name="password" /><br/>
+	<label for="new-password">New Password:</label>
+	<input type="password" name="new-password" /><br/>
+	<label for="new-password-again">New Again:</label>
+	<input type="password" name="new-password-again" /><br/>
+	<input type="submit" value="Change Password" />
 </form>
