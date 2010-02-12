@@ -2,10 +2,11 @@
 import ConfigParser
 import bcrypt
 import web
+from smf import constants
 
 # Load configuration variables
 config = ConfigParser.RawConfigParser()
-config.read( 'config' )
+config.read( constants.DEFAULT_CONFIG )
 
 # Set up web.py
 web.config.debug = False
