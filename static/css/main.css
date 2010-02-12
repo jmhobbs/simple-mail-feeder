@@ -1,0 +1,9 @@
+* {
+	font-family: Arial, Helvetica, sans-serif;
+}
+
+#form-login label {
+	width: 70px;
+	font-weight: bold;
+	display: inline-block;
+}

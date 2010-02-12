@@ -1,0 +1,11 @@
+$def with (error)
+$var title: Log In
+
+$if error:
+    <div class="error">$error</div>
+
+<form id="form-login" action="/login" method="POST">
+	<label for="email">E-mail:</label><input type="text" name="email" /><br/>
+	<label for="password">Password:</label><input type="password" name="password" /><br/>
+	<input type="submit" value="Log In" />
+</form>
