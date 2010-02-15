@@ -1,3 +1,5 @@
 *.db3
 *.pyc
 *.conf
+sessions/*
+!.gitignore

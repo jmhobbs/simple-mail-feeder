@@ -1,0 +1,16 @@
+$def with ( logs )
+$var title: Logs
+
+<table border="1">
+	<tr>
+		<th>Time</th>
+		<th>Type</th>
+		<th>Message</th>
+	</tr>
+$for log in logs
+	<tr>
+	<td>$log.logged</td>
+	<td>$log.type</td>
+	<td>$log.message</td>
+	</tr>
+</table>

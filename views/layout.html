@@ -11,7 +11,9 @@ $def with ( content )
 				<li><a href="/user/subscriptions">My Subscriptions</a></li>
 				<li><a href="/logout">Log Out</a></li>
 				$if session.is_admin:
+					<li><b>Admin</b></li>
 					<li><a href="/admin/feeds">All Feeds</a></li>
+					<li><a href="/admin/log">View Log</a></li>
 			</ul>
 			<br style="clear: both;" />
 		$if session.is_admin:

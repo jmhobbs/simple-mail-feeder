@@ -6,6 +6,7 @@ import bcrypt
 import web
 from multiprocessing import Process
 from smf import constants
+from smf import util
 import smf.feeder
 
 # Load configuration variables
@@ -25,6 +26,8 @@ urls = (
 	
 	"/admin/feeds", "list_feeds",
 	
+	"/admin/log", "show_log",
+	
 	"/user/subscribe", "user_subscribe",
 	"/user/unsubscribe/(.*)", "user_unsubscribe",
 	"/user/subscriptions", "user_subscriptions"
@@ -39,6 +42,11 @@ class index:
 	def GET ( self ):
 		results = db.query( "SELECT COUNT(*) AS subscriptions FROM subscriptions WHERE user_id=$user_id", vars={ 'user_id': session.user_id } )
 		return render.index( results[0].subscriptions )
+
+class show_log:
+	def GET ( self ):
+		results = db.query( "SELECT * FROM [log] ORDER BY [logged] LIMIT 0,20" )
+		return render.show_log( results )
 
 ####### Session Management #######
 
@@ -85,7 +93,7 @@ class start_feeder:
 	def GET ( self ):
 		global feeder
 		if not feeder.is_alive():
-			feeder = Process( target=smf.feeder.run )
+			feeder = Process( target=smf.feeder.run, args=( constants.DEFAULT_CONFIG, ) )
 			feeder.daemon = True
 			feeder.start()
 			session.set_flash = "Feeder Started"
@@ -120,8 +128,8 @@ class user_subscribe:
 		except IndexError, e:
 			result = smf.feeder.new_feed( i.url )
 			if dict == type( result ):
-				now = time.strftime( '%Y-%m-%d %H:%M:%s', datetime.now().timetuple() )
-				modified = time.strftime( '%Y-%m-%d %H:%M:%s', result['modified'] )
+				now = util.timestamp()
+				modified = util.timestamp( result['modified'] )
 				feed_id = db.insert( 'feeds', title=result['title'], url=result['url'], description=result['description'], link=result['link'], added=now, checked=now, modified=modified, etag=result['etag'], interval=900 )
 				title = result['title']
 			else:
@@ -178,7 +186,7 @@ app.add_processor( web.unloadhook( flash_unloadhook ) )
 
 ####### Start the Feeder #######
 
-feeder = Process( target=smf.feeder.run )
+feeder = Process( target=smf.feeder.run, args=( constants.DEFAULT_CONFIG, ) )
 feeder.daemon = True
 feeder.start()
 
