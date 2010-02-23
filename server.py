@@ -2,12 +2,19 @@
 from datetime import datetime
 import time
 import ConfigParser
-import bcrypt
+
 import web
+
 from multiprocessing import Process
+
 from smf import constants
 from smf import util
 import smf.feeder
+
+from smf import feed
+from smf import user
+from smf import subscription
+from smf import story
 
 # Load configuration variables
 config = ConfigParser.RawConfigParser()
@@ -36,16 +43,15 @@ urls = (
 app = web.application( urls, locals() )
 session = web.session.Session( app, web.session.DiskStore('sessions'), initializer={ 'authenticated': False, 'user_id': 0, 'is_admin': False, 'flash': False, 'set_flash': False, 'error_flash': False, 'set_error_flash': False } )
 render = web.template.render( 'views/', base='layout', globals={'session': session} )
-db = web.database( dbn='sqlite', db=config.get( 'Database', 'path' ) )
 
 class index:
 	def GET ( self ):
-		results = db.query( "SELECT COUNT(*) AS subscriptions FROM subscriptions WHERE user_id=$user_id", vars={ 'user_id': session.user_id } )
-		return render.index( results[0].subscriptions )
+		subscriptions = subscription.get_subscriptions_by_user( session.user_id )
+		return render.index( len( subscriptions ) )
 
 class show_log:
 	def GET ( self ):
-		results = db.query( "SELECT * FROM [log] ORDER BY [logged] LIMIT 0,20" )
+		results = smf.database.get_log()
 		return render.show_log( results )
 
 ####### Session Management #######
@@ -58,20 +64,15 @@ class login:
 
 	def POST( self ):
 		i = web.input()
-		res = db.select( 'users', { 'email': i.email }, where="email = $email", limit=1 )
-
-		# See if we got anything from the db...
-		try:
-			user = res[0]
-		except IndexError, e:
+		
+		if False == user.User.check_credentials( i.email, i.password ):
 			session.error_flash = "Invalid Credentials"
 			return render.login()
-
-		# See if the passwords match...
-		if bcrypt.hashpw( i.password, user.password ) == user.password:
+		else:
 			session.authenticated = True
-			session.user_id = user.id
-			session.is_admin = user.is_admin
+			# TODO: Here
+			#session.user_id = user.id
+			#session.is_admin = user.is_admin
 			session.set_flash = "Logged In"
 			raise web.seeother( '/' )
 		else:
@@ -192,6 +193,7 @@ feeder.start()
 
 ####### Start the Server #######
 try:
+	smf.database.init( config.get( 'Database', 'path' ) )
 	app.run()
 except Exception, e:
 	feeder.terminate()
