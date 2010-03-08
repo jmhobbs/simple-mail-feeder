@@ -10,15 +10,7 @@ from multiprocessing import Process
 from smf import constants
 from smf import util
 import smf.feeder
-
-from smf import feed
-from smf import user
-from smf import subscription
-from smf import story
-
-# Load configuration variables
-config = ConfigParser.RawConfigParser()
-config.read( constants.DEFAULT_CONFIG )
+from smf import models
 
 # Set up web.py
 web.config.debug = False
@@ -65,7 +57,7 @@ class login:
 	def POST( self ):
 		i = web.input()
 		
-		if False == user.User.check_credentials( i.email, i.password ):
+		if False == models.User.check_credentials( i.email, i.password ):
 			session.error_flash = "Invalid Credentials"
 			return render.login()
 			
@@ -189,7 +181,6 @@ feeder.start()
 
 ####### Start the Server #######
 try:
-	smf.database.init( config.get( 'Database', 'path' ) )
 	app.run()
 except Exception, e:
 	feeder.terminate()

@@ -30,36 +30,11 @@ print "-" * 40
 print "  Welcome to Simple Mail Feeder setup!"
 print "-" * 40
 
-# Load configuration variables
 try:
-	config = ConfigParser.RawConfigParser()
-	if 0 == len( config.read( constants.DEFAULT_CONFIG ) ):
-		print "Your configuration file doesn't exist. Let's build one.\n"
-		while True:
-			dbpath = raw_input( "Path to database: [smf.db3] " )
-			if 0 == len( dbpath.strip() ):
-				dbpath = 'smf.db3'
-			break
-		try:
-			config.add_section( 'Database' )
-			config.set( 'Database', 'path', dbpath )
-			config.write( open( constants.DEFAULT_CONFIG, 'w' ) )
-			print "Wrote your config file!"
-		except Exception, e:
-			print "Couldn't save your new config file, sorry!"
-			print "Error:", e
-			exit()
-	
-except Exception, e:
-	print "Oops! Couldn't load your config file."
-	print "Please set that up first."
-	exit()
-
-try:
-	conn = sqlite3.connect( config.get( 'Database', 'path' ) )
+	conn = sqlite3.connect( 'smf.db3' )
 	cursor = conn.cursor()
 	res = cursor.execute( 'SELECT name FROM sqlite_master WHERE type="table"' )
-	req_tables = { 'feeds': False, 'messages': False, 'subscriptions': False, 'users': False }
+	req_tables = { 'feeds': False, 'stories': False, 'subscriptions': False, 'users': False, 'log': False }
 	for row in res:
 		if row[0] in req_tables.keys():
 			req_tables[row[0]] = True
