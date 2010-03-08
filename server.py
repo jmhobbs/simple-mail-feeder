@@ -68,16 +68,12 @@ class login:
 		if False == user.User.check_credentials( i.email, i.password ):
 			session.error_flash = "Invalid Credentials"
 			return render.login()
-		else:
-			session.authenticated = True
-			# TODO: Here
-			#session.user_id = user.id
-			#session.is_admin = user.is_admin
-			session.set_flash = "Logged In"
-			raise web.seeother( '/' )
-		else:
-			session.error_flash = "Invalid Credentials"
-			return render.login()
+			
+		session.authenticated = True
+		session.user_id = user.id
+		session.is_admin = user.is_admin
+		session.set_flash = "Logged In"
+		raise web.seeother( '/' )
 
 class logout:
 	def GET( self ):

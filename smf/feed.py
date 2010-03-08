@@ -41,9 +41,10 @@ class Feed:
 				raise Exception( d.debug_message)
 			if not sp.feed.has_key( 'title' ):
 				raise Exception( "Content does not appear to be an RSS feed." )
-			except Exception, e:
-				database.log( 'Error fetching feed #%d: %s' % ( self.id, e ) )
-				self.mark_missed()
+		except Exception, e:
+			database.log( 'Error fetching feed #%d: %s' % ( self.id, e ) )
+			self.mark_missed()
+		else:
 			try:
 				if d.status == 304:
 					self.mark_checked()
