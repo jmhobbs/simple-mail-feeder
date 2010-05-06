@@ -38,13 +38,11 @@ render = web.template.render( 'views/', base='layout', globals={'session': sessi
 
 class index:
 	def GET ( self ):
-		subscriptions = subscription.get_subscriptions_by_user( session.user_id )
-		return render.index( len( subscriptions ) )
+		return render.index( models.Subscription.get_subscriptions_count_for_user( session.user_id ) )
 
 class show_log:
 	def GET ( self ):
-		results = smf.database.get_log()
-		return render.show_log( results )
+		return render.show_log( models.Log.get_logs() )
 
 ####### Session Management #######
 
@@ -57,10 +55,12 @@ class login:
 	def POST( self ):
 		i = web.input()
 		
-		if False == models.User.check_credentials( i.email, i.password ):
+		user = models.User.check_credentials( i.email, i.password )
+		
+		if False == user:
 			session.error_flash = "Invalid Credentials"
 			return render.login()
-			
+		
 		session.authenticated = True
 		session.user_id = user.id
 		session.is_admin = user.is_admin
@@ -101,8 +101,7 @@ class stop_feeder:
 class list_feeds:
 	def GET ( self ):
 		# TODO: Detailed metrics here
-		feeds = db.select( 'feeds' )
-		return render.list_feeds( feeds )
+		return render.list_feeds( models.Feed.get_all_feeds() )
 
 ####### Subscription Management #######
 
@@ -137,9 +136,10 @@ class user_unsubscribe:
 
 class user_subscriptions:
 	def GET ( self ):
-		subcount_results = db.query( "SELECT COUNT(*) AS subscriptions FROM subscriptions WHERE user_id=$user_id", vars={ 'user_id': session.user_id } )
-		feed_results = db.query( "SELECT * FROM feeds WHERE id IN ( SELECT feed_id FROM subscriptions WHERE user_id = $user_id )", vars={ 'user_id': session.user_id } )
-		return render.user_subscriptions( subcount_results[0].subscriptions, feed_results )
+		return render.user_subscriptions(
+			models.Subscription.get_subscriptions_count_for_user( session.user_id ),
+			models.Subscription.get_subscribed_feeds_for_user( session.user_id )
+		)
 
 ####### Pre/Post Hooks #######
 

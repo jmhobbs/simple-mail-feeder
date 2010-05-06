@@ -24,12 +24,17 @@ class User:
 	def check_credentials ( email, password ):
 		res = db.select( 'users', { 'email': email }, where="[email] = $email", limit=1 )
 		try:
-			if bcrypt.hashpw( password, res[0].password ) == res[0].password:
-				return res[0].id
+			row = res[0]
+			if bcrypt.hashpw( password, row.password ) == row.password:
+				user = User()
+				user.id = row.id
+				user.is_admin = row.is_admin
+				return user
 			else:
 				return False
 		except Exception, e:
 			Log.log( 'Problem during user log in: %s' % e )
+			raise
 			return False
 
 ################################################################################
@@ -59,6 +64,15 @@ class Subscription:
 	@staticmethod
 	def get_subscriptions_by_feed ( feed_id ):
 		return db.select( 'subscriptions', { 'feed_id': feed_id }, where="[feed_id] = $feed_id" )
+
+	@staticmethod
+	def get_subscribed_feeds_for_user ( user_id ):
+		return db.query( "SELECT * FROM feeds WHERE id IN ( SELECT feed_id FROM subscriptions WHERE user_id = $user_id )", vars={ 'user_id': user_id } )
+
+	@staticmethod
+	def get_subscriptions_count_for_user ( user_id ):
+		res = db.query( "SELECT COUNT(*) AS total FROM [subscriptions] WHERE [user_id] = $user_id", vars={ 'user_id': user_id } )
+		return res[0].total
 
 	@staticmethod
 	def get_subscriptions_by_user ( user_id ):
@@ -212,6 +226,10 @@ class Feed:
 			feeds.append( Feed( row ) )
 		return feeds
 		
+	@staticmethod
+	def get_all_feeds ():
+		return db.select( 'feeds' )
+		
 ################################################################################
 
 
@@ -226,28 +244,32 @@ class Log:
 	def log ( message, level='ERROR' ):
 		db.insert( 'log', logged=util.timestamp(), level=level, message=message )
 
-	#@staticmethod
-	#def get_logs ( self, count=20, page=0, levels=('ERROR', 'FATAL') ):
-		## TODO: Should be something like "is_iterable" right?
-		#if tuple == type( levels ) or list == type( levels ) or dict == type( levels ):
-			#type_string = 'WHERE ('
-			#for level in levels:
-				#type_string = type_string + ' [level] == ? OR'
+	@staticmethod
+	def get_logs ( count=20, page=0, levels=('ERROR', 'FATAL') ):
+		# TODO: Should be something like "is_iterable" right?
+		if tuple == type( levels ) or list == type( levels ) or dict == type( levels ):
+			i = 0
+			query_params = {}
+			type_string = 'WHERE ('
+			for level in levels:
+				type_string = type_string + ' [level] == $i%d OR' % i
+				query_params['i%d'%i] = level
+				i = i + 1
 				
-			#if 0 != len( levels ):
-				#type_string = type_string[:-2] + ")"
-			#else:
-				#type_string = ' '
-		#else:
-			#type_string = ' '
-			#levels = []
+			if 0 != len( levels ):
+				type_string = type_string[:-2] + ")"
+			else:
+				type_string = ' '
+		else:
+			type_string = ' '
+			query_params = {}
 
-		#type_string = "%s LIMIT %d,%d" % ( type_string, ( count * page ), count )
+		type_string = "%s LIMIT %d,%d" % ( type_string, ( count * page ), count )
 		
-		#result = self.cursor.execute( "SELECT * FROM [log] " + type_string , levels )
+		result = db.query( "SELECT * FROM [log] " + type_string , query_params )
 		
-		#logs = []
-		#for log in result:
-			#logs.append( log )
+		logs = []
+		for log in result:
+			logs.append( log )
 
-		#return logs
+		return logs
