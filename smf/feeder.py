@@ -25,7 +25,7 @@ def run ( config_path ):
 					if not d.feed.has_key( 'title' ):
 						raise Exception( "Content does not appear to be an RSS feed." )
 				except Exception, e:
-					conn.execute( "INSERT INTO [log] ( [logged], [type], [message] ) VALUES ( ?, ?, ? )", ( util.timestamp(), 'ERROR', 'Error fetching feed #' + str( row[0] ) + ": " + str( e ) ) )
+					conn.execute( "INSERT INTO [log] ( [logged], [level], [message] ) VALUES ( ?, ?, ? )", ( util.timestamp(), 'ERROR', 'Error fetching feed #' + str( row[0] ) + ": " + str( e ) ) )
 					conn.execute( "UPDATE [feeds] SET [checked] = ? WHERE [id] = ?", ( util.timestamp() - int( row[4] / 2 ), row[0] ) )
 					continue
 				
@@ -52,9 +52,9 @@ def run ( config_path ):
 							modified = datetime.now().timetuple()
 
 						conn.execute( "UPDATE [feeds] SET [checked] = ?, [modified] = ?, [etag] = ? WHERE [id] = ?", ( util.timestamp(), modified, etag, row[0] ) )
-						conn.execute( "INSERT INTO [log] ( [logged], [type], [message] ) VALUES ( ?, ?, ? )", ( util.timestamp(), 'UPDATE', 'Updated feed #' + str( row[0] ) + " with " + count + " new entries." ) )
+						conn.execute( "INSERT INTO [log] ( [logged], [level], [message] ) VALUES ( ?, ?, ? )", ( util.timestamp(), 'DEBUG', 'Updated feed #' + str( row[0] ) + " with " + count + " new entries." ) )
 				except Exception, e:
-					conn.execute( "INSERT INTO [log] ( [logged], [type], [message] ) VALUES ( ?, ?, ? )", ( util.timestamp(), 'ERROR', 'Error parsing feed #' + str( row[0] ) + ": " + str( e ) ) )
+					conn.execute( "INSERT INTO [log] ( [logged], [level], [message] ) VALUES ( ?, ?, ? )", ( util.timestamp(), 'ERROR', 'Error parsing feed #' + str( row[0] ) + ": " + str( e ) ) )
 
 			time.sleep( 30 ) # Arbitrary...
 		except KeyboardInterrupt, e:
@@ -73,27 +73,3 @@ def run ( config_path ):
 	#d.entries[0].description
 	#d.entries[0].date_parsed
 	#d.entries[0].id
-
-def new_feed ( url ):
-	try:
-		d = feedparser.parse( url )
-		if not d.has_key( 'status' ):
-			raise Exception( 'Error fetching content. Bad URL?' )
-		if d.status != 200 and d.status != 301 and d.status != 302:
-			raise Exception( d.debug_message)
-		if not d.feed.has_key( 'title' ):
-			raise Exception( "Content does not appear to be an RSS feed." )
-		
-		if d.has_key( 'etag' ):
-			etag = d.etag
-		else:
-			etag = ''
-		
-		if d.has_key( 'modified' ):
-			modified = modified
-		else:
-			modified = datetime.now().timetuple()
-		
-		return { 'url': d.href, 'title': d.feed.title, 'link': d.feed.link, 'description': d.feed.description, 'etag': etag, 'modified': modified }
-	except Exception, e:
-		return str( e )
