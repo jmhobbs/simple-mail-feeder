@@ -9,6 +9,9 @@ import bcrypt
 import feedparser
 import util
 
+from datetime import datetime
+import traceback
+
 db = web.database( dbn='sqlite', db='smf.db3' )
 
 ################################################################################
@@ -206,6 +209,9 @@ class Feed:
 		database.cursor.execute( "UPDATE [feeds] SET [checked] = ?, [modified] = ?, [etag] = ? WHERE [id] = ?", ( util.timestamp(), self.modified, self.etag, self.id ) )
 		database.connection.commit()
 
+	def insert ( self ):
+		self.id = db.insert( 'feeds', title=self.title, url=self.url, description=self.description, link=self.link, added=self.added, checked=self.added, modified=self.modified, etag=self.etag, interval=900 )
+
 	#def create ( self ):
 		#database.cursor.execute
 
@@ -227,9 +233,58 @@ class Feed:
 		return feeds
 		
 	@staticmethod
-	def get_all_feeds ():
+	def get_all ():
 		return db.select( 'feeds' )
-		
+
+	@staticmethod
+	def get_from_url ( url ):
+		res = db.select( 'feeds', { 'url': url }, where="url = $url", limit=1 )
+		try:
+			match = res[0]
+			return match
+		except IndexError, e:
+			return None
+
+	@staticmethod
+	def new_from_url ( url ):
+		try:
+			d = feedparser.parse( url )
+			if not d.has_key( 'status' ):
+				raise Exception( 'Error fetching content. Bad URL?' )
+			if d.status != 200 and d.status != 301 and d.status != 302:
+				raise Exception( d.debug_message)
+			if not d.feed.has_key( 'title' ):
+				raise Exception( "Content does not appear to be an RSS feed." )
+			
+			if d.has_key( 'etag' ):
+				etag = d.etag
+			else:
+				etag = ''
+			
+			if d.has_key( 'modified' ):
+				modified = d['modified']
+			else:
+				modified = datetime.now().timetuple()
+			
+			feed = Feed()
+			feed.url = d.href
+			feed.title = d.feed.title
+			feed.link = d.feed.link
+			try:
+				feed.description = d.feed.description
+			except AttributeError, e:
+				pass
+			feed.etag = etag
+			feed.modified = util.timestamp( modified )
+			feed.added = util.timestamp()
+			
+			feed.insert()
+			
+			return feed
+		except Exception, e:
+			Log.log( "Failed to add Feed from URL '%s', reason '%s'." % ( url, e ), Log.LOG_WARNING )
+			return str( e )
+
 ################################################################################
 
 
@@ -246,7 +301,7 @@ class Log:
 
 	@staticmethod
 	def get_logs ( count=20, page=0, levels=('ERROR', 'FATAL') ):
-		# TODO: Should be something like "is_iterable" right?
+		# TODO: There should be something like "is_iterable" right?
 		if tuple == type( levels ) or list == type( levels ) or dict == type( levels ):
 			i = 0
 			query_params = {}

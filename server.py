@@ -42,7 +42,10 @@ class index:
 
 class show_log:
 	def GET ( self ):
-		return render.show_log( models.Log.get_logs() )
+		logs = models.Log.get_logs()
+		for log in logs:
+			log.logged = datetime.fromtimestamp( int( log.logged ) ).ctime()
+		return render.show_log( logs )
 
 ####### Session Management #######
 
@@ -101,31 +104,22 @@ class stop_feeder:
 class list_feeds:
 	def GET ( self ):
 		# TODO: Detailed metrics here
-		return render.list_feeds( models.Feed.get_all_feeds() )
+		return render.list_feeds( models.Feed.get_all() )
 
 ####### Subscription Management #######
 
 class user_subscribe:
 	def POST ( self ):
 		i = web.input()
-		res = db.select( 'feeds', { 'url': i.url }, what="title,id", where="url = $url", limit=1 )
-		try:
-			match = res[0]
-			feed_id = match.id
-			title = match.title
-		except IndexError, e:
-			result = smf.feeder.new_feed( i.url )
-			if dict == type( result ):
-				now = util.timestamp()
-				modified = util.timestamp( result['modified'] )
-				feed_id = db.insert( 'feeds', title=result['title'], url=result['url'], description=result['description'], link=result['link'], added=now, checked=now, modified=modified, etag=result['etag'], interval=900 )
-				title = result['title']
-			else:
-				session.set_error_flash = 'Error adding subscription: ' + result
+		feed = models.Feed.get_from_url( i.url )
+		if None == feed:
+			feed = models.Feed.new_from_url( i.url )
+			if str == type( feed ):
+				session.set_error_flash = 'Error adding subscription: ' + feed
 				raise web.seeother( '/user/subscriptions' )
 
-		db.insert( 'subscriptions', feed_id=feed_id, user_id=session.user_id )
-		session.set_flash = 'Subscribed to  "' + title + '"'
+		models.Subscription.subscribe( feed.id, session.user_id )
+		session.set_flash = 'Subscribed to  "' + feed.title + '"'
 		raise web.seeother( '/user/subscriptions' )
 
 class user_unsubscribe:
